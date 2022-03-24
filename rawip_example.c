@@ -61,8 +61,10 @@ int main(int argc, char *argv[])
 	strncpy(data, data_string, strlen(data_string));
 
 	//fill the IP header here
+	iph->version=4;
+	iph->ihl=5;
 	iph->tos = 0;
-	iph->tot_len =  htons(sizeof(struct iphdr) + sizeof(struct udphdr) + strlen(data_string));
+	iph->tot_len =  htons(sizeof(struct iphdr) + sizeof(struct udphdr) + strlen(data));
 	iph->id = 123;
 	iph->frag_off = 0;
 	iph->ttl = 30;
@@ -82,7 +84,7 @@ int main(int argc, char *argv[])
 	psh.protocol=iph->protocol;
 	psh.udp_length=udph->len;
 	psh.placeholder=0;
-	udph->check = htons(checksum((unsigned short *)&psh,sizeof(struct pseudo_udp_header)));
+	udph->check = htons(checksum((unsigned short *)&psh,sizeof(struct pseudo_udp_header))+checksum((unsigned short *)udph,sizeof(struct udphdr)+strlen(data)));
 	//send the packet
 	int bytes_sent = sendto(fd, packet, ntohs(iph->tot_len) , 0, (struct sockaddr*)&to, sizeof(to));
 	printf("%d",bytes_sent);
