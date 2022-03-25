@@ -72,7 +72,7 @@ int main(int argc, char *argv[])
 	inet_pton(AF_INET,source_ip ,&iph->saddr);
 	inet_pton(AF_INET,dest_ip ,&iph->daddr);
 	iph->check = 0;
-	iph->check =  htons(checksum((unsigned short *)iph, sizeof(struct iphdr)));
+	iph->check =  checksum((unsigned short *)iph, sizeof(struct iphdr));
 
 	//fill the UDP header
 	udph->source = htons(SRC_PORT);
@@ -84,7 +84,13 @@ int main(int argc, char *argv[])
 	psh.protocol=iph->protocol;
 	psh.udp_length=udph->len;
 	psh.placeholder=0;
-	udph->check = htons(checksum((unsigned short *)&psh,sizeof(struct pseudo_udp_header))+checksum((unsigned short *)udph,sizeof(struct udphdr)+strlen(data)));
+	//apparently adding two checksums is not the checksum of the "sum" which explains the following lines 
+	//udph->check = checksum((unsigned short *)&psh,sizeof(struct pseudo_udp_header))+checksum((unsigned short *)udph,sizeof(struct udphdr)+strlen(data));
+	void *tmp = malloc(sizeof(struct udphdr)+strlen(data)+sizeof(struct pseudo_udp_header));
+	memcpy(tmp ,  &psh , sizeof (struct pseudo_udp_header));
+	memcpy(tmp + sizeof(struct pseudo_udp_header) , udph , sizeof(struct udphdr) + strlen(data));
+
+	udph->check = checksum(tmp, sizeof(struct udphdr)+strlen(data)+sizeof(struct pseudo_udp_header));
 	//send the packet
 	int bytes_sent = sendto(fd, packet, ntohs(iph->tot_len) , 0, (struct sockaddr*)&to, sizeof(to));
 	printf("%d",bytes_sent);
